@@ -15,7 +15,7 @@ contract Counter {
 }
 
 interface ICounter{
-  function getcount() external view returns(uint);
+  function getCount() external view returns(uint);
   function inc() external;
 }
 
