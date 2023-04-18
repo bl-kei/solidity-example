@@ -3,8 +3,8 @@ import { expect } from 'chai';
 
 import { BigNumber } from 'ethers';
 
-import { Exchange } from '../typechain-types/contracts/defi/CSMM/Exchange';
-import { Token } from '../typechain-types/contracts/defi/CSMM/Token';
+import { Exchange } from '../typechain-types/contracts/defi/CPMM/Exchange';
+import { Token } from '../typechain-types/contracts/defi/CPMM/Token';
 
 const toWei = (value: number) => ethers.utils.parseEther(value.toString());
 const toEther = (value: BigNumber) => ethers.utils.formatEther(value);
