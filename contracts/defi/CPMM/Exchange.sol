@@ -40,15 +40,26 @@ contract Exchange is ERC20 {
 
         payable(msg.sender).transfer(ethAmount);
         token.transfer(msg.sender, tokenAmount);
+
+        console.log('ethAmount : %s, tokenAmount : %s', ethAmount, tokenAmount);
     }
 
     // ETH -> ERC20
     function ethToTokenSwap(uint256 _mintTokens) public payable {
         // calculate amount out (zero fee)
-        uint256 outputAmount = getOutputAmount(
+        uint256 outputAmount = getOutputAmountWithFee(
             msg.value, 
             address(this).balance - msg.value, 
             token.balanceOf(address(this)));
+        
+        unchecked {
+            console.log('outputAmount : %s, _mintTokens : %s', outputAmount, _mintTokens);
+            if (outputAmount >= _mintTokens) {
+                console.log('true');
+            } else {
+                console.log('false');
+            }
+        }
 
         require(outputAmount >= _mintTokens, "Inffucient outputAmount");
         //transfer token out
@@ -57,7 +68,7 @@ contract Exchange is ERC20 {
     // ERC20 -> ETH
     function TokenToEthSwap(uint256 _tokenSold, uint256 _minEth) public payable {
         // calculate amount out (zero fee)
-        uint256 outputAmount = getOutputAmount(
+        uint256 outputAmount = getOutputAmountWithFee(
             _tokenSold, 
             token.balanceOf(address(this)), 
             address(this).balance);
@@ -90,6 +101,17 @@ contract Exchange is ERC20 {
     ) public pure returns (uint256) {
         uint256 numerator = (inputAmount * outputReserve);
         uint256 denominator = (inputReserve + inputAmount);
+        return numerator / denominator;
+    }
+
+    function getOutputAmountWithFee(
+        uint256 inputAmount,
+        uint256 inputReserve,
+        uint256 outputReserve
+    ) public pure returns (uint256) {
+        uint256 inputAmountWithFee = inputAmount * 99;
+        uint256 numerator = (inputAmount * inputAmountWithFee);
+        uint256 denominator = (inputReserve * 100 + inputAmountWithFee);
         return numerator / denominator;
     }
 }

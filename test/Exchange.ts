@@ -70,10 +70,8 @@ describe('Exchange', () => {
       await token.approve(exchange.address, toWei(4000));
       //4:1
       await exchange.addLiquidity(toWei(4000), { value: toWei(1000) });
-
       const tokenReserve = await token.balanceOf(exchange.address);
       const etherReserve = await getBalance(exchange.address);
-
       expect(
         toEther(
           await exchange.getOutputAmount(
@@ -91,11 +89,10 @@ describe('Exchange', () => {
       await token.approve(exchange.address, toWei(4000));
       //4:1
       await exchange.addLiquidity(toWei(4000), { value: toWei(1000) });
-
       // 1ETH : ??
       await exchange
         .connect(user)
-        .ethToTokenSwap(toWei(3), { value: toWei(1) });
+        .ethToTokenSwap(toWei(0.0003), { value: toWei(1) });
 
       console.log(toEther(await token.balanceOf(user.address)));
     });
@@ -108,18 +105,38 @@ describe('Exchange', () => {
       await exchange.addLiquidity(toWei(4000), { value: toWei(1000) });
       await exchange
         .connect(user)
-        .ethToTokenSwap(toWei(3), { value: toWei(1) });
+        .ethToTokenSwap(toWei(0.0001), { value: toWei(1) });
 
-      console.log(
-        `before token swap ${toEther(await token.balanceOf(user.address))}`
-      );
+      console.log(`before token swap ${await token.balanceOf(user.address)}`);
 
       // 1Token : ??
       await token.connect(user).approve(exchange.address, toWei(1000));
-      await exchange.connect(user).TokenToEthSwap(toWei(1), toWei(0.0001));
+      await exchange.connect(user).TokenToEthSwap(toWei(0.0001), 100000);
 
       console.log(
         `after token swap ${toEther(await token.balanceOf(user.address))}`
+      );
+    });
+  });
+
+  describe('swapWithFee', async () => {
+    it('correct swapWithFee', async () => {
+      await token.approve(exchange.address, toWei(50));
+
+      await exchange.addLiquidity(toWei(50), { value: toWei(50) });
+
+      await exchange
+        .connect(user)
+        .ethToTokenSwap(toWei(11), { value: toWei(30) });
+
+      expect(toEther(await token.balanceOf(user.address)).toString()).to.equal(
+        '11.179422835633626097'
+      );
+
+      await exchange.removeLiquidity(toWei(30));
+
+      expect(toEther(await token.balanceOf(owner.address)).toString()).to.equal(
+        '999973.292346298619824341'
       );
     });
   });
