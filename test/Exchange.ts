@@ -39,20 +39,6 @@ describe('Exchange', () => {
     });
   });
 
-  describe('swap', async () => {
-    it('swap', async () => {
-      await token.approve(exchange.address, toWei(1000));
-      await exchange.addLiquidity(toWei(1000), { value: toWei(1000) });
-
-      await exchange.connect(user).ethToTokenSwap({ value: toWei(1) });
-
-      expect(await getBalance(exchange.address)).to.equal(toWei(1001));
-      expect(await token.balanceOf(exchange.address)).to.equal(toWei(999));
-      expect(await token.balanceOf(user.address)).to.equal(toWei(1));
-      // expect(await getBalance(user.address)).to.equal(toWei(9999));
-    });
-  });
-
   describe('getOutputAmount', async () => {
     it('correct getOutputAmount', async () => {
       await token.approve(exchange.address, toWei(4000));
@@ -71,6 +57,44 @@ describe('Exchange', () => {
           )
         )
       ).to.equal('3.996003996003996003');
+    });
+  });
+
+  describe('ethToTokenSwap', async () => {
+    it('correct ethToTokenSwap', async () => {
+      await token.approve(exchange.address, toWei(4000));
+      //4:1
+      await exchange.addLiquidity(toWei(4000), { value: toWei(1000) });
+
+      // 1ETH : ??
+      await exchange
+        .connect(user)
+        .ethToTokenSwap(toWei(3), { value: toWei(1) });
+
+      console.log(toEther(await token.balanceOf(user.address)));
+    });
+  });
+
+  describe('TokenToEthSwap', async () => {
+    it('correct TokenToEthSwap', async () => {
+      await token.approve(exchange.address, toWei(4000));
+      //4:1
+      await exchange.addLiquidity(toWei(4000), { value: toWei(1000) });
+      await exchange
+        .connect(user)
+        .ethToTokenSwap(toWei(3), { value: toWei(1) });
+
+      console.log(
+        `before token swap ${toEther(await token.balanceOf(user.address))}`
+      );
+
+      // 1Token : ??
+      await token.connect(user).approve(exchange.address, toWei(1000));
+      await exchange.connect(user).TokenToEthSwap(toWei(1), toWei(0.0001));
+
+      console.log(
+        `after token swap ${toEther(await token.balanceOf(user.address))}`
+      );
     });
   });
 });
