@@ -5,11 +5,16 @@ import "hardhat/console.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 
+import "./interfaces/IFactory.sol";
+import "./interfaces/IExchange.sol";
+
 contract Exchange is ERC20 {
     IERC20 token;
+    IFactory factory;
 
     constructor (address _token) ERC20("Gray Uniswap V2", "GUNI-V2"){
         token = IERC20(_token);
+        factory = IFactory(msg.sender);
     }
     
     // _maxTokens -> the value included Slippage
@@ -45,25 +50,33 @@ contract Exchange is ERC20 {
     }
 
     // ETH -> ERC20
-    function ethToTokenSwap(uint256 _mintTokens) public payable {
+    function ethToTokenSwap(uint256 _minTokens) public payable {
+        ethToToken(_minTokens, msg.sender);
+    }
+
+    function ethToTokenTransfer(uint256 _minTokens, address _recipient) public payable {
+        ethToToken(_minTokens, _recipient);
+    }
+
+    function ethToToken(uint _minTokens, address _recipient) private {
         // calculate amount out (zero fee)
-        uint256 outputAmount = getOutputAmountWithFee(
+        uint256 outputAmount = getOutputAmount(
             msg.value, 
             address(this).balance - msg.value, 
             token.balanceOf(address(this)));
         
         unchecked {
-            console.log('outputAmount : %s, _mintTokens : %s', outputAmount, _mintTokens);
-            if (outputAmount >= _mintTokens) {
+            console.log('outputAmount : %s, _mintTokens : %s', outputAmount, _minTokens);
+            if (outputAmount >= _minTokens) {
                 console.log('true');
             } else {
                 console.log('false');
             }
         }
 
-        require(outputAmount >= _mintTokens, "Inffucient outputAmount");
+        require(outputAmount >= _minTokens, "Inffucient outputAmount");
         //transfer token out
-        IERC20(token).transfer(msg.sender, outputAmount);
+        IERC20(token).transfer(_recipient, outputAmount);
     }
     // ERC20 -> ETH
     function TokenToEthSwap(uint256 _tokenSold, uint256 _minEth) public payable {
@@ -87,6 +100,37 @@ contract Exchange is ERC20 {
         IERC20(token).transferFrom(msg.sender, address(this), _tokenSold);
         payable(msg.sender).transfer(outputAmount);
     }
+
+    // ERC20 -> ERC20
+    function TokenToTokenSwap(
+        uint256 _tokenSold,
+        uint256 _minTokenBought,
+        uint256 _minEthBought,
+        address _tokenAddress) public payable {
+
+        address toTokenExchangeAddress = factory.getExchange(_tokenAddress);
+        // calculate amount out (zero fee)
+        uint256 ethOutputAmount = getOutputAmount(
+            _tokenSold, 
+            token.balanceOf(address(this)), 
+            address(this).balance);
+
+        unchecked {
+            console.log('%s, %s', ethOutputAmount, _minEthBought);
+            if (ethOutputAmount >= _minEthBought) {
+                console.log('true');
+            } else {
+                console.log('false');
+            }
+        }
+
+        require(ethOutputAmount >= _minEthBought, "Inffucient outputAmount");
+        //transfer token out
+        IERC20(token).transferFrom(msg.sender, address(this), _tokenSold);
+
+        IExchange(toTokenExchangeAddress).ethToTokenTransfer{value: ethOutputAmount}(_minTokenBought, msg.sender);
+    }
+
 
     function getPrice(uint256 inputReserve, uint256 outputReserve) public pure returns (uint256) {
         uint256 numerator = inputReserve;

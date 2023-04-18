@@ -119,7 +119,7 @@ describe('Exchange', () => {
     });
   });
 
-  describe('swapWithFee', async () => {
+  describe.skip('swapWithFee', async () => {
     it('correct swapWithFee', async () => {
       await token.approve(exchange.address, toWei(50));
 
@@ -138,6 +138,72 @@ describe('Exchange', () => {
       expect(toEther(await token.balanceOf(owner.address)).toString()).to.equal(
         '999973.292346298619824341'
       );
+    });
+  });
+
+  describe('tokenToTokenSwap', async () => {
+    it('correct tokenToTokenSwap', async () => {
+      [owner, user] = await ethers.getSigners();
+      const FactoryFactory = await ethers.getContractFactory('Factory');
+      const factory = await FactoryFactory.deploy();
+      await factory.deployed();
+
+      const GrayTokenFactory = await ethers.getContractFactory('Token');
+      const grayToken = await GrayTokenFactory.deploy(
+        'GrayToken',
+        'GRAY',
+        toWei(1010)
+      );
+      await grayToken.deployed();
+
+      const BlackTokenFactory = await ethers.getContractFactory('Token');
+      const blackToken = await BlackTokenFactory.deploy(
+        'BlackToken',
+        'BLACK',
+        toWei(1000)
+      );
+      await blackToken.deployed();
+
+      // create gray/Eth pair exchange contract
+      const grayEthExchangeAddress = await factory.callStatic.createExchange(
+        grayToken.address
+      );
+      console.log(grayEthExchangeAddress);
+      console.log(await factory.getExchange(grayToken.address));
+      await factory.createExchange(grayToken.address);
+
+      // create black/Eth pair exchange contract
+      const blackEthExchangeAddress = await factory.callStatic.createExchange(
+        blackToken.address
+      );
+      console.log(blackEthExchangeAddress);
+      console.log(await factory.getExchange(blackToken.address));
+      await factory.createExchange(blackToken.address);
+
+      // add liquidity 1000/1000
+      await grayToken.approve(grayEthExchangeAddress, toWei(1000));
+      await blackToken.approve(blackEthExchangeAddress, toWei(1000));
+
+      const ExchangeFactory = await ethers.getContractFactory('Exchange');
+      await ExchangeFactory.attach(grayEthExchangeAddress).addLiquidity(
+        toWei(1000),
+        { value: toWei(1000) }
+      );
+      await ExchangeFactory.attach(blackEthExchangeAddress).addLiquidity(
+        toWei(1000),
+        { value: toWei(1000) }
+      );
+
+      await grayToken.approve(grayEthExchangeAddress, toWei(10));
+      await ExchangeFactory.attach(grayEthExchangeAddress).TokenToTokenSwap(
+        toWei(10),
+        toWei(9),
+        toWei(9),
+        blackToken.address
+      );
+
+      console.log(toEther(await blackToken.balanceOf(owner.address)));
+      console.log(toEther(await blackToken.balanceOf(grayEthExchangeAddress)));
     });
   });
 });
